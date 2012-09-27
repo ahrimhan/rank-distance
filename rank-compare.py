@@ -38,6 +38,7 @@ class ARRank:
 
     def minusEntrySet(self, otherRank):
         return self.entrySet().difference(otherRank.entrySet())
+
         
 
 class KendallsTau:
@@ -127,53 +128,66 @@ class SpearmansFootrule:
 
 
 def main():
-    if len(sys.argv) != 5:
-        print "Usage: %s [category] [static-cutline] [dynamic-cutline] [changed-cutline]" % sys.argv[0]
+    if len(sys.argv) != 4:
+        print "Usage: %s [category] [changed-cutline] [show-header(yes/no)]" % sys.argv[0]
         sys.exit(1)
 
     try:
         rankfile1 = sys.argv[1] + "-static.dat"
         rankfile2 = sys.argv[1] + "-dynamic.dat"
-        rankfile3 = sys.argv[1] + "-changed.dat"
-        rankN1 = int(sys.argv[2])
-        rankN2 = int(sys.argv[3])
-        rankN3 = int(sys.argv[4])
+        rankfile3 = sys.argv[1] + "-dynsta.dat"
+        rankfile4 = sys.argv[1] + "-changed.dat"
+
+        changed_cutline = int(sys.argv[2])
+
+        showHeader = sys.argv[3] == "yes"
     except Exception:
-        print "Usage: %s [category] [static-cutline] [dynamic-cutline] [changed-cutline]" % sys.argv[0]
+        print "Usage: %s [category] [changed-cutline] [show-header(yes/no)]" % sys.argv[0]
         sys.exit(1)
 
     rankfullfile1 = os.path.join(CURDIR, rankfile1)
     rankfullfile2 = os.path.join(CURDIR, rankfile2)
     rankfullfile3 = os.path.join(CURDIR, rankfile3)
+    rankfullfile4 = os.path.join(CURDIR, rankfile4)
+
     rank1 = ARRank()
     rank2 = ARRank()
     rank3 = ARRank()
-    rt1 = rank1.load(rankfullfile1, rankN1)
-    rt2 = rank2.load(rankfullfile2, rankN2)
-    rt3 = rank3.load(rankfullfile3, rankN3)
+    rank4 = ARRank()
+
+    static_total = rank1.load(rankfullfile1, 0)
+    dynamic_total = rank2.load(rankfullfile2, 0)
+    dynsta_total = rank3.load(rankfullfile3, 0)
+    change_total = rank4.load(rankfullfile4, changed_cutline)
 
     kt = KendallsTau(0.5)
-    static_k = kt.rankDistance(rank1, rank3)
+    static_k = kt.rankDistance(rank1, rank4)
     sf = SpearmansFootrule()
-    static_f = sf.rankDistance(rank1, rank3)
+    static_f = sf.rankDistance(rank1, rank4)
 
     kt = KendallsTau(0.5)
-    dynamic_k = kt.rankDistance(rank2, rank3)
+    dynamic_k = kt.rankDistance(rank2, rank4)
     sf = SpearmansFootrule()
-    dynamic_f = sf.rankDistance(rank2, rank3)
+    dynamic_f = sf.rankDistance(rank2, rank4)
 
-    if rankN1 == 0:
-        rankN1 = rt1
-    if rankN2 == 0:
-        rankN2 = rt2
-    if rankN3 == 0:
-        rankN3 = rt3
+    kt = KendallsTau(0.5)
+    dynsta_k = kt.rankDistance(rank3, rank4)
+    sf = SpearmansFootrule()
+    dynsta_f = sf.rankDistance(rank3, rank4)
 
-    rf1 = float(rankN1) / rt1 * 100
-    rf2 = float(rankN2) / rt2 * 100
-    rf3 = float(rankN3) / rt3 * 100
+    if changed_cutline == 0:
+        changed_cutline = change_total
 
-    print "static:%3d/%3d(%7.2f%%) dynamic:%3d/%3d(%7.2f%%) changed:%3d/%3d(%7.2f%%) | Static K:%9.2f F:%9.2f | Dynamic K:%9.2f F:%9.2f" % (rankN1, rt1, rf1, rankN2, rt2, rf2, rankN3, rt3, rf3,static_k, static_f, dynamic_k, dynamic_f)
+    change_percent = float(changed_cutline) / change_total * 100
+
+    if showHeader:
+        print "|---------------------+-------------------------+-------------------------+-------------------------|"
+        print "|        changed      |         Static          |         Dynamic         |     Static + Dynamic    |"
+        print "+---------------------+-------------------------+-------------------------+-------------------------|"
+        print "| cut | tot |    %    | tot |    K    |    F    | tot |    K    |    F    | tot |    K    |    F    |"
+        print "+-----+-----+---------+-----+---------+---------+-----+---------+---------+-----+---------+---------|"
+
+    print "| %3d | %3d | %6.2f%% | %3d |%9.2f|%9.2f| %3d |%9.2f|%9.2f| %3d |%9.2f|%9.2f|" % (changed_cutline, change_total, change_percent, static_total, static_k, static_f, dynamic_total, dynamic_k, dynamic_f, dynsta_total, dynsta_k, dynsta_f)
 
 
 
